@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credit Risk Assessment</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #ffffff;
+      --bg2:      #f6f5f0;
+      --bg3:      #f0efe9;
+      --border:   rgba(0,0,0,.12);
+      --border2:  rgba(0,0,0,.22);
+      --text:     #1a1a18;
+      --text2:    #5a5a57;
+      --text3:    #8a8a87;
+      --radius:   10px;
+      --radius-lg:14px;
+      --green-bg: #eaf3de; --green-text: #27500a; --green-mid: #3B6D11;
+      --red-bg:   #fcebeb; --red-text:   #501313; --red-mid:   #A32D2D;
+      --amber-bg: #faeeda; --amber-text: #412402;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:    #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
+        --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.20);
+        --text:  #e8e7e0; --text2:#a8a79f; --text3:#6a6a67;
+        --green-bg:#173404; --green-text:#C0DD97; --green-mid:#97C459;
+        --red-bg:#501313;   --red-text:#F7C1C1;   --red-mid:#F09595;
+        --amber-bg:#412402; --amber-text:#FAC775;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg3);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 700px; margin: 0 auto; }
+
+    .page-header { margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .page-header p  { font-size: 14px; color: var(--text2); }
+
+    .card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 14px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+
+    @media (max-width: 540px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12px; font-weight: 500; color: var(--text2); }
+    .field input, .field select {
+      height: 38px;
+      padding: 0 11px;
+      font-size: 13.5px;
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--border2);
+      box-shadow: 0 0 0 3px rgba(55,138,221,.12);
+    }
+    .field .hint { font-size: 11px; color: var(--text3); }
+
+    .mb-14 { margin-bottom: 14px; }
+
+    .submit-btn {
+      width: 100%;
+      height: 46px;
+      font-size: 14.5px;
+      font-weight: 600;
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      margin-top: 4px;
+    }
+    .submit-btn:hover  { opacity: .88; }
+    .submit-btn:active { transform: scale(.98); }
+    .submit-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .error-msg {
+      background: var(--red-bg);
+      color: var(--red-mid);
+      border: 0.5px solid var(--red-mid);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .result-card {
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-top: 1.25rem;
+      border: 0.5px solid var(--border);
+    }
+    .result-approve { background: var(--green-bg); border-color: var(--green-mid); }
+    .result-decline { background: var(--red-bg);   border-color: var(--red-mid);   }
+
+    .result-header { display: flex; align-items: center; gap: 14px; margin-bottom: 1.25rem; }
+    .verdict-icon {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0; font-weight: 700;
+    }
+    .verdict-approve { background: var(--green-mid); color: var(--green-bg); }
+    .verdict-decline { background: var(--red-mid);   color: var(--red-bg); }
+    .verdict-title { font-size: 19px; font-weight: 600; }
+    .verdict-sub   { font-size: 13px; margin-top: 3px; opacity: .75; }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      margin-bottom: 1.1rem;
+    }
+    .metric {
+      background: rgba(255,255,255,.4);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .metric { background: rgba(255,255,255,.06); }
+    }
+    .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+    .metric-value { font-size: 20px; font-weight: 600; }
+
+    .risk-bar-wrap  { margin-bottom: 1.1rem; }
+    .risk-bar-label {
+      display: flex; justify-content: space-between;
+      font-size: 12px; margin-bottom: 6px; align-items: center;
+    }
+    .risk-bar-track {
+      height: 9px; background: rgba(0,0,0,.12);
+      border-radius: 5px; overflow: hidden;
+    }
+    .risk-bar-fill  { height: 100%; border-radius: 5px; transition: width .7s ease; }
+
+    .tier-badge {
+      font-size: 11.5px; padding: 3px 10px;
+      border-radius: 20px; font-weight: 600;
+    }
+
+    .factors { margin-top: .85rem; }
+    .factors-title { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 9px; }
+    .factor-row {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 12.5px; padding: 5px 0;
+      border-bottom: 0.5px solid rgba(0,0,0,.06);
+    }
+    .factor-row:last-child { border-bottom: none; }
+    .factor-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-good    { background: var(--green-mid); }
+    .dot-bad     { background: var(--red-mid);   }
+    .dot-neutral { background: #888780; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .divider { height: 0.5px; background: var(--border); margin: 14px 0; }
+
+    footer {
+      text-align: center; font-size: 11.5px; color: var(--text3);
+      margin-top: 2rem; padding-top: 1rem;
+      border-top: 0.5px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="page-header">
+    <h1>Loan risk assessment</h1>
+    <p>Enter applicant details to receive an instant credit decision, risk score, and default probability.</p>
+  </div>
+
+  <div class="card">
+    <div class="section-label">Applicant profile</div>
+    <div class="grid-3 mb-14">
+      <div class="field">
+        <label for="age">Age</label>
+        <input type="number" id="age" min="18" max="100" placeholder="e.g. 32">
+      </div>
+      <div class="field">
+        <label for="income">Annual income ($)</label>
+        <input type="number" id="income" min="1" placeholder="e.g. 75000">
+      </div>
+      <div class="field">
+        <label for="emp">Employment length (yrs)</label>
+        <input type="number" id="emp" min="0" max="50" step="0.5" placeholder="e.g. 5 (optional)">
+        <span class="hint">Leave blank if unknown</span>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="ownership">Home ownership</label>
+        <select id="ownership">
+          <option value="">Select...</option>
+          <option>RENT</option>
+          <option>MORTGAGE</option>
+          <option>OWN</option>
+          <option>OTHER</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="prior_default">Prior default on file</label>
+        <select id="prior_default">
+          <option value="">Select...</option>
+          <option value="N">No</option>
+          <option value="Y">Yes</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">Loan details</div>
+    <div class="grid-3 mb-14">
+      <div class="field">
+        <label for="loan_amnt">Loan amount ($)</label>
+        <input type="number" id="loan_amnt" min="1" placeholder="e.g. 12000">
+      </div>
+      <div class="field">
+        <label for="int_rate">Interest rate (%)</label>
+        <input type="number" id="int_rate" min="1" max="60" step="0.1" placeholder="e.g. 11.5 (optional)">
+        <span class="hint">Leave blank if unknown</span>
+      </div>
+      <div class="field">
+        <label for="grade">Loan grade</label>
+        <select id="grade">
+          <option value="">Select...</option>
+          <option>A</option><option>B</option><option>C</option>
+          <option>D</option><option>E</option><option>F</option><option>G</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="intent">Loan purpose</label>
+        <select id="intent">
+          <option value="">Select...</option>
+          <option value="PERSONAL">Personal</option>
+          <option value="EDUCATION">Education</option>
+          <option value="MEDICAL">Medical</option>
+          <option value="VENTURE">Business venture</option>
+          <option value="HOMEIMPROVEMENT">Home improvement</option>
+          <option value="DEBTCONSOLIDATION">Debt consolidation</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="cred_hist">Credit history length (yrs)</label>
+        <input type="number" id="cred_hist" min="0" max="50" placeholder="e.g. 8">
+      </div>
+    </div>
+  </div>
+
+  <button class="submit-btn" id="assess-btn" onclick="assess()">Assess loan application</button>
+  <div id="error-box" class="error-msg"></div>
+  <div id="result-area"></div>
+
+  <footer>
+    Credit risk assessment tool &mdash; for demonstration purposes only.<br>
+    Connects to FastAPI backend at <code>http://localhost:8000</code> if available, otherwise uses the built-in risk engine.
+  </footer>
+</div>
+
+<script>
+const API_URL = 'http://localhost:8000/predict';cd /path/to/your/project
+
+
+function getVal(id){ return document.getElementById(id).value.trim(); }
+
+function validate(){
+  const errs = [];
+  const age    = parseFloat(getVal('age'));
+  const income = parseFloat(getVal('income'));
+  const amnt   = parseFloat(getVal('loan_amnt'));
+  const cred   = parseFloat(getVal('cred_hist'));
+  if (!getVal('age')    || isNaN(age)    || age < 18  || age > 100) errs.push('Age must be between 18 and 100.');
+  if (!getVal('income') || isNaN(income) || income <= 0)            errs.push('Annual income must be a positive number.');
+  if (!getVal('loan_amnt') || isNaN(amnt) || amnt <= 0)            errs.push('Loan amount must be a positive number.');
+  if (!getVal('cred_hist') || isNaN(cred) || cred < 0)             errs.push('Credit history length is required.');
+  if (!getVal('ownership'))    errs.push('Home ownership is required.');
+  if (!getVal('prior_default'))errs.push('Prior default on file is required.');
+  if (!getVal('grade'))        errs.push('Loan grade is required.');
+  if (!getVal('intent'))       errs.push('Loan purpose is required.');
+  if (!isNaN(amnt) && !isNaN(income) && amnt > 10 * income)
+    errs.push('Loan amount cannot exceed 10× annual income.');
+  const ir = getVal('int_rate');
+  if (ir && (parseFloat(ir) < 1 || parseFloat(ir) > 60))
+    errs.push('Interest rate must be between 1% and 60%.');
+  return errs;
+}
+
+function buildPayload(){
+  const empRaw = getVal('emp');
+  const irRaw  = getVal('int_rate');
+  return {
+    person_age:                  parseFloat(getVal('age')),
+    person_income:               parseFloat(getVal('income')),
+    person_emp_length:           empRaw ? parseFloat(empRaw) : null,
+    loan_amnt:                   parseFloat(getVal('loan_amnt')),
+    loan_int_rate:               irRaw  ? parseFloat(irRaw)  : null,
+    loan_percent_income:         parseFloat(getVal('loan_amnt')) / parseFloat(getVal('income')),
+    cb_person_cred_hist_length:  parseFloat(getVal('cred_hist')),
+    loan_grade:                  getVal('grade'),
+    person_home_ownership:       getVal('ownership'),
+    loan_intent:                 getVal('intent'),
+    cb_person_default_on_file:   getVal('prior_default'),
+  };
+}
+
+/* ── Fallback local risk engine (mirrors notebook logic) ── */
+function engineerFeatures(d){
+  const emp = d.person_emp_length ?? 0;
+  const gradeMap = {A:7,B:6,C:5,D:4,E:3,F:2,G:1};
+  const tierMap  = {A:'low',B:'low',C:'medium',D:'medium',E:'high',F:'high',G:'high'};
+  return {
+    logIncome:    Math.log1p(d.person_income),
+    dti:          d.loan_amnt / (d.person_income + 1),
+    loanPerHist:  d.loan_amnt / (d.cb_person_cred_hist_length + 1),
+    ageEmp:       emp / (d.person_age + 1),
+    gradeScore:   gradeMap[d.loan_grade] || 3,
+    priorDefault: d.cb_person_default_on_file === 'Y' ? 1 : 0,
+    tier:         tierMap[d.loan_grade] || 'medium',
+    empMissing:   d.person_emp_length === null ? 1 : 0,
+    irMissing:    d.loan_int_rate === null ? 1 : 0,
+  };
+}
+
+function computeRiskLocal(raw, feat){
+  const baseProbByGrade = {A:0.05,B:0.10,C:0.18,D:0.28,E:0.40,F:0.55,G:0.68};
+  let prob = baseProbByGrade[raw.loan_grade] || 0.25;
+  if (feat.priorDefault)               prob = Math.min(prob + 0.18, 0.95);
+  if (feat.dti > 0.25)                 prob = Math.min(prob + feat.dti * 0.15, 0.95);
+  if (raw.person_income < 30000)       prob = Math.min(prob + 0.06, 0.95);
+  if (raw.cb_person_cred_hist_length > 10) prob = Math.max(prob - 0.05, 0.01);
+  if (raw.person_emp_length > 5)       prob = Math.max(prob - 0.04, 0.01);
+  if (raw.person_home_ownership === 'MORTGAGE' || raw.person_home_ownership === 'OWN')
+                                        prob = Math.max(prob - 0.03, 0.01);
+  if (raw.loan_intent === 'DEBTCONSOLIDATION') prob = Math.min(prob + 0.05, 0.95);
+  if (raw.loan_intent === 'EDUCATION')  prob = Math.max(prob - 0.02, 0.01);
+  return Math.round(prob * 10000) / 10000;
+}
+
+function probToScore(prob){
+  const p = Math.max(1e-6, Math.min(prob, 1 - 1e-6));
+  const odds   = (1 - p) / p;
+  const factor = 20 / Math.log(2);
+  const offset = 600 - factor * Math.log(50);
+  return Math.min(850, Math.max(300, Math.round(offset + factor * Math.log(odds))));
+}
+
+function getTier(prob){
+  if (prob < 0.10) return {label:'Very low',  color:'#27500a', bg:'#eaf3de'};
+  if (prob < 0.20) return {label:'Low',        color:'#3B6D11', bg:'#C0DD97'};
+  if (prob < 0.35) return {label:'Medium',     color:'#633806', bg:'#FAC775'};
+  if (prob < 0.50) return {label:'High',       color:'#791f1f', bg:'#F7C1C1'};
+  return             {label:'Very high',  color:'#501313', bg:'#F09595'};
+}
+
+function getFactors(raw, feat){
+  const gradeMap = {A:7,B:6,C:5,D:4,E:3,F:2,G:1};
+  const g = gradeMap[raw.loan_grade] || 3;
+  const rows = [];
+  rows.push({type: g>=5?'good':g>=3?'neutral':'bad',
+    text: `Loan grade ${raw.loan_grade} — ${g>=5?'low-risk tier':g>=3?'medium-risk tier':'high-risk tier'}`});
+  rows.push({type: feat.priorDefault?'bad':'good',
+    text: feat.priorDefault?'Prior default on file — significant negative signal':'No prior default on file'});
+  const dtiPct = Math.round(feat.dti * 100);
+  rows.push({type: feat.dti<0.15?'good':feat.dti<0.3?'neutral':'bad',
+    text: `Debt-to-income ratio ${dtiPct}% — ${feat.dti<0.15?'healthy':feat.dti<0.3?'moderate':'elevated'}`});
+  rows.push({type: raw.person_income>=60000?'good':raw.person_income>=35000?'neutral':'bad',
+    text: `Income $${raw.person_income.toLocaleString()} — ${raw.person_income>=60000?'strong repayment capacity':raw.person_income>=35000?'adequate income':'lower income increases risk'}`});
+  rows.push({type: raw.cb_person_cred_hist_length>=8?'good':raw.cb_person_cred_hist_length>=4?'neutral':'bad',
+    text: `Credit history ${raw.cb_person_cred_hist_length} yrs — ${raw.cb_person_cred_hist_length>=8?'established history':raw.cb_person_cred_hist_length>=4?'moderate history':'limited credit history'}`});
+  if (raw.person_home_ownership==='MORTGAGE'||raw.person_home_ownership==='OWN')
+    rows.push({type:'good', text:`Home ${raw.person_home_ownership.toLowerCase()} — asset stability indicator`});
+  if (raw.loan_intent==='DEBTCONSOLIDATION')
+    rows.push({type:'bad', text:'Debt consolidation purpose — suggests existing debt burden'});
+  return rows;
+}
+
+function renderResult(prob, score, approved, lpi){
+  const THRESHOLD = 0.28;
+  const raw   = buildPayload();
+  const feat  = engineerFeatures(raw);
+  const tier  = getTier(prob);
+  const factors = getFactors(raw, feat);
+  const barW    = Math.round(prob * 100);
+  const barColor= prob<0.2?'#3B6D11':prob<0.35?'#BA7517':prob<0.5?'#993C1D':'#A32D2D';
+
+  const factorHTML = factors.map(f => `
+    <div class="factor-row">
+      <div class="factor-dot dot-${f.type}"></div>
+      <span>${f.text}</span>
+    </div>`).join('');
+
+  document.getElementById('result-area').innerHTML = `
+    <div class="result-card ${approved ? 'result-approve' : 'result-decline'}">
+      <div class="result-header">
+        <div class="verdict-icon ${approved ? 'verdict-approve' : 'verdict-decline'}">
+          ${approved ? '&#10003;' : '&#10005;'}
+        </div>
+        <div>
+          <div class="verdict-title" style="color:${approved?'var(--green-text)':'var(--red-text)'}">
+            ${approved ? 'Loan approved' : 'Loan declined'}
+          </div>
+          <div class="verdict-sub" style="color:${approved?'var(--green-mid)':'var(--red-mid)'}">
+            ${approved ? 'Application meets credit criteria' : 'Default risk exceeds acceptable threshold'}
+          </div>
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric">
+          <div class="metric-label">Default probability</div>
+          <div class="metric-value" style="color:${barColor}">${(prob*100).toFixed(1)}%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Credit score</div>
+          <div class="metric-value">${score}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Loan-to-income</div>
+          <div class="metric-value">${Math.round(lpi*100)}%</div>
+        </div>
+      </div>
+
+      <div class="risk-bar-wrap">
+        <div class="risk-bar-label">
+          <span style="font-size:12px;color:var(--text2)">Default risk level</span>
+          <span class="tier-badge" style="background:${tier.bg};color:${tier.color}">${tier.label} risk</span>
+        </div>
+        <div class="risk-bar-track">
+          <div class="risk-bar-fill" style="width:${barW}%;background:${barColor}"></div>
+        </div>
+      </div>
+
+      <div class="factors">
+        <div class="factors-title">Key risk factors</div>
+        ${factorHTML}
+      </div>
+    </div>`;
+}
+
+async function assess(){
+  const errs = validate();
+  const errBox = document.getElementById('error-box');
+  if (errs.length){
+    errBox.textContent = errs[0];
+    errBox.style.display = 'block';
+    return;
+  }
+  errBox.style.display = 'none';
+
+  const btn = document.getElementById('assess-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Analysing...';
+
+  const payload = buildPayload();
+  let prob, score, approved;
+
+  try {
+    /* ── Try FastAPI backend first ── */
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    prob     = data.default_probability;
+    score    = data.credit_score;
+    approved = data.decision === 'APPROVE';
+  } catch (_) {
+    /* ── Fallback to local engine if API unavailable ── */
+    const feat = engineerFeatures(payload);
+    prob     = computeRiskLocal(payload, feat);
+    score    = probToScore(prob);
+    approved = prob < 0.28;
+  }
+
+  renderResult(prob, score, approved, payload.loan_percent_income);
+
+  btn.disabled = false;
+  btn.innerHTML = 'Reassess application';
+}
+</script>
+</body>
+</html>
